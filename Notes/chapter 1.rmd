@@ -1,6 +1,6 @@
 ---
 title: "Chapter 1 Notes"
-author: STAT 443
+author: Matthew Kielar
 date: "`r Sys.Date()`"
 output:
   bookdown::pdf_document2:
