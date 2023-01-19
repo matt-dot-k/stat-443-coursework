@@ -1,7 +1,7 @@
 ---
 title: 'STAT 443: Lab 1'
-author: 'Student Name (Student #)'
-date: "xx January, 2022"
+author: 'Matthew Kielar (Student #96793245)'
+date: "`r Sys.Date()`"
 output:
   pdf_document: default
   html_document: default
@@ -12,54 +12,188 @@ knitr::opts_chunk$set(echo = TRUE)
 #if you do not have the package, type install.packages("name_of_the_package")
 library(knitr)
 library(tseries)
+library(tidyverse)
+library(lubridate)
 ```
 
 ### Question 1
 
 (a) 
 
-```{r, echo=TRUE}
-# this is where your R code goes
+```{r, echo = FALSE, include = FALSE}
+plot_theme <- theme(
+  plot.title = element_text(
+    size = 16, face = "bold", hjust = 0.5,
+    margin = margin(b = 0.25, unit = "cm")),
+  plot.subtitle = element_text(
+    size = 12),
+  axis.title.x = element_text(
+    size = 12, face = "bold", angle = 0,
+    margin = margin(r = 0.25, unit = "cm")),
+  axis.title.y = element_text(
+    size = 12, face = "bold", angle = 90,
+    margin = margin(r = 0.25, unit = "cm")),
+  axis.text = element_text(
+    size = 12),
+  axis.ticks.length = unit(0.25, "cm"),
+  panel.grid.minor.x = element_line(
+    size = 0.1, color = "gray50"),
+  panel.grid.major.x = element_line(
+    size = 0.1, color = "gray50"),
+  panel.grid.minor.y = element_line(
+    size = 0.1, color = "gray50"),
+  panel.grid.major.y = element_line(
+    size = 0.1, color = "gray50"),
+  panel.background = element_rect(
+    fill = "#FFFFFF"),
+  panel.border = element_rect(
+    color = "#000000", fill = NA, linewidth = 2),
+  plot.background = element_rect(
+    fill = "#FFFFFF"),
+  legend.background = element_rect(
+    fill = "#FFFFFF"),
+  legend.key = element_rect(
+    fill = "#FFFFFF"),
+  legend.title = element_text(
+    size = 12, face = "bold"),
+  legend.text = element_text(
+    size = 12)
+)
+
+theme_set(plot_theme)
 ```
 
+```{r, echo=TRUE}
+dat <- read.csv("LakeLevels.csv", sep = ",", header = TRUE)
+dat$Date <- mdy(gsub("/", "-", dat$Date))
+
+head(dat, 10)
+names(dat)
+
+scatterplot <- ggplot(
+  data = dat,
+  mapping = aes(
+    x = Date, y = LakeLevel)
+) +
+  geom_point(
+    color = "#0F5499",
+    size = 1.2
+) +
+  labs(
+    x = "Date",
+    y = "Lake Level",
+    title = "Lake Levels Since January 2007"
+) +
+  scale_x_date(
+    date_breaks = "1 year"
+)
+
+print(scatterplot)
+```
+
+Overall, this chart differs from the one I'd like since it displays the plotted points
+but doesn't connect them together in the way a classic lineplot does.
 
 (b)
 
 ```{r, echo=TRUE}
-# this is where your R code goes
+is.ts(dat)
+
+x <- ts(dat$LakeLevel, start = c(2007, 1, 1), frequency = 365)
 ```
 
 
 (c)
 
 ```{r, echo=TRUE}
-# this is where your R code goes
+lineplot <- ggplot(
+  data = dat,
+  mapping = aes(
+    x = Date, y = LakeLevel
+  )
+) +
+  geom_line(
+    color = "#0F5499",
+    linewidth = 1.2
+) +
+  labs(
+    x = "Date",
+    y = "Lake Level",
+    title = "Lake Levels Since January 2007"
+) +
+  scale_x_date(
+    date_breaks = "1 year"
+)
+
+print(lineplot)
 ```
 
+Overall it looks like the series doesn't change much in the long run, but exhibits a 
+lot of seasonality instead. Lake levels increase a lot during the summer months 
+and then proceed to decrease again at the start of a new year.
+
+\clearpage
 
 ### Question 2
 
 (a) 
 
 ```{r, echo=TRUE}
-# this is where your R code goes
+set.seed(123)
+white_noise <- data.frame(
+  t = seq(1, 200, length.out = 200),
+  X_t = rnorm(n = 200, mean = 0, sd = 1)
+)
+
+white_noise_ts <- ts(white_noise$X_t, start = 1, end = 200)
 ```
 
 
 (b)
 
 ```{r, echo=TRUE}
-# this is where your R code goes
+simul_plot <- ggplot(
+  data = white_noise,
+  mapping = aes(
+    x = t, y = X_t
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    color = "#000000",
+    linewidth = 0.7
+) +
+  geom_line(
+    color = "#990F3D",
+    linewidth = 1.2
+) +
+  labs(
+    x = "t",
+    y = "X_t",
+    title = "Simulated X_t for t = 1, 2, ..., 200"
+)
+
+print(simul_plot)
+
+nrow(white_noise[white_noise$X_t > 2, ])
+nrow(white_noise[white_noise$X_t < -2, ])
 ```
 
+So in total we have 8 observations that fall outside the interval [-2, 2]. By the empirical rule,
+we can expect 10 observations to take on values $\pm 2$. 
 
 (c)
 
 ```{r, echo=TRUE}
-# this is where your R code goes
+acf <- acf(white_noise_ts)
 ```
 
+The sample acf values are quite low across all the lags, which intuitively makes sense since the data
+are observations drawn from i.i.d standard normal R.Vs. There are a few larger values, but those are 
+likely larger observed values of $X_t$. 
 
+
+\clearpage
 
 ### More information on R Markdown
 
