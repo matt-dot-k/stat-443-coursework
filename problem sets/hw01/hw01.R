@@ -21,7 +21,57 @@ co2_chart <- ggplot(
         title = "Surface CO2 Concentration Since 1979"
 )
 
-co2_train <- co2_mm_gl
+print(co2_chart)
+
+co2_train <- co2_mm_gl %>%
+    filter(year < 2020) %>%
+    select(average) %>%
+    mutate(time = seq(1, length(average))) %>%
+    relocate(time, .before = average)
+
+co2_test <- co2_mm_gl %>%
+    filter(year > 2019) %>%
+    select(average) %>%
+    mutate(time = seq(493, 492 + length(average))) %>%
+    relocate(time, .before = average)
+
+moving_avg <- decompose(
+    ts(co2_train$average,
+       start = 1979,
+       frequency = 12),
+     "additive")
+
+loess <- stl(
+    ts(co2_train$average,
+       start = 1979,
+       frequency = 12),
+    s.window = "periodic")$time.series
+
+plot(moving_avg, col = "#990F3D", lwd = 2)
+plot(loess, col = "#990F3D", lwd = 2, main = "LOESS Decomposition")
+
+co2_train$moving_avg <- moving_avg$trend
+
+co2_train <- co2_train %>%
+    mutate(loess = as_tibble(loess)$trend)
+
+lm_fit1 <- lm(formula = moving_avg ~ time, data = co2_train)
+lm_fit2 <- lm(formula = loess ~ time, data = co2_train)
+
+#' @param obs A vector of observed values
+#' @param pred A vector of predicted values
+
+mean_sq_err <- function(obs, pred) {
+    sq_diff <- (obs - pred)^2
+    mse <- mean(sq_diff)
+    return(mse)
+}
+
+moving_avg_preds <- predict.lm(lm_fit1, newdata = co2_test)
+loess_preds <- predict.lm(lm_fit2, newdata = co2_test)
+
+mean_sq_err(co2_test$average, moving_avg_preds)
+mean_sq_err(co2_test$average, loess_preds)
 
 # Question 2
 
@@ -43,7 +93,7 @@ gdp_chart <- ggplot(
         title = "Canadian GDP Since 1997"
 ) +
     scale_x_date(
-        date_breaks = "3 years"
+        date_breaks = "3 years", date_labels = "%Y"
 )
 
 sequential <- tibble(
@@ -86,11 +136,13 @@ annual_chart <- ggplot(
 
 acf_sequential <- acf(
     x = ts(sequential$Growth),
+    lag.max = nrow(sequential) - 1,
     main = "ACF of Sequential Series",
     lwd = 2.0)
 
 acf_annual <- acf(
     x = ts(annual$Growth),
+    lag.max = nrow(annual) - 1,
     main = "ACF of Annual Series",
     lwd = 2.0)
 
@@ -100,7 +152,6 @@ acf_annual <- acf(
 #' @param n Number of observations in the white noise process
 #' @param lag The lag to calculate the autocorrelation coefficient for
 #' @param max_iter The number of iterations to run the simulation for
-
 
 acf_simulation <- function(n = 1000, sd = 1, lag = 1, max_iter) {
     stopifnot(is.numeric(max_iter))
@@ -142,4 +193,4 @@ simul_chart <- ggplot(
         title = "Distribution of ACF for 5000 WN Processes"
 )
 
-simul_chart
+print(simul_chart)
