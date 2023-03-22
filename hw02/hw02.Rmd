@@ -1,0 +1,341 @@
+---
+title: Assignment 2
+author: Matthew Kielar
+date: "`r Sys.Date()`"
+output:
+    bookdown::pdf_document2:
+        number_sections: false
+        toc: false
+---
+
+```{r setup, include = FALSE, echo = FALSE, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(tseries)
+
+plot_theme <- theme(
+    plot.title = element_text(
+        size = 16, face = "bold", hjust = 0),
+    plot.subtitle = element_text(
+        size = 12, hjust = 0),
+    axis.title = element_text(
+        size = 12, face = "bold"),
+    axis.text = element_text(
+        size = 12),
+    axis.ticks.length = unit(0.25, "cm"),
+    axis.line = element_line(
+        size = 0.7, color = "#000000"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_line(
+        size = 0.1, color = "gray50"),
+    panel.grid.major.y = element_line(
+        size = 0.1, color = "gray50"),
+    panel.border = element_rect(
+        color = "#000000", fill = NA, size = 1.0),
+    panel.background = element_rect(
+        fill = "#FFFFFF"),
+    plot.background = element_rect(
+        fill = "#FFFFFF")
+)
+
+theme_set(plot_theme)
+```
+
+## Question 1
+
+__Part a)__ $\medskip$
+
+For the following AR(2) process, the Yule-Walker equations are
+
+$$\rho_{k} - \frac{11}{10}\rho_{k-1} + \frac{3}{10}\rho_{k-2} = 0, \quad k \geq 2$$
+
+If $k = 1$:
+
+$$
+\begin{aligned}
+\rho_{1} - 1.1 - 0.3\rho_{1} = 0 & \implies \rho_{1} = \frac{11}{10} - \frac{3}{10}\rho_{1} \\
+& \implies \frac{13}{10}\rho_{1} = \frac{11}{10} \\
+& \implies \rho_{1} = \frac{11}{13}
+\end{aligned}
+$$
+
+If $k = 2$:
+
+$$
+\begin{aligned}
+\rho_{2} - \rho_{1} + 0.3 = 0 & \implies \rho_{2} = \frac{11}{10}\rho_{1} - 0.3 \\
+& \implies \rho_{2} = \frac{11}{10}(\frac{11}{13}) - \frac{3}{10} \\
+& \implies \rho_{2} = \frac{41}{65}
+\end{aligned}
+$$
+
+__Part b)__ $\medskip$
+
+To recall, we have the following Yule-Walker equations
+
+$$\rho_{k} - \frac{11}{10}\rho_{k-1} + \frac{3}{10}\rho_{k-2} = 0, \quad k \geq 2$$
+
+If we substitute in $\rho_{k} = A\lambda^k$, we get
+
+$$
+\begin{aligned}
+\lambda^2 - \frac{11}{10}\lambda + 0.3 = 0 & \implies (\lambda - \frac{3}{5})(\lambda - \frac{1}{2}) = 0 \\
+& \implies \lambda = \frac{3}{5}, \frac{1}{2}
+\end{aligned}
+$$
+
+\clearpage
+
+Which then gives the following equation
+
+$$\rho_{k} = A_{1}\left(\frac{3}{5}\right)^{|k|} + A_{2}\left(\frac{1}{2}\right)^{|k|}$$
+
+Since $\rho_{0} = 1$ implies that $A_{1} + A_{2} = 1$, and taking into account that $\rho_{1} = \frac{11}{13}$,
+we get the following system of equations
+
+\begin{equation}
+A_{1} + A_{2} = 1
+\end{equation}
+\begin{equation}
+\frac{3}{5}A_{1} + \frac{1}{2}A_{2} = \frac{11}{13}
+\end{equation}
+
+$\smallskip$
+
+After some rearranging of (2), we get $A_{2} = \frac{22}{13} - \frac{6}{5}A_{1}$, which can be plugged into (1) to obtain
+
+$$A_{1} + \frac{22}{13} - \frac{6}{5}A_{1} = 1 \implies -\frac{1}{5}A_{1} = -\frac{9}{13} \implies A_{1} = \frac{45}{13}$$
+
+Plugging this back into (1) means we have $A_{2} = -\frac{32}{13}$. Therefore the a.c.f of $\{X_t\}_{t \in \mathbb{N}}$ and general 
+solution to the Yule-Walker equations is
+
+$$\rho(k) = \frac{45}{13}\left(\frac{3}{5}\right)^{|k|} - \frac{32}{13}\left(\frac{1}{2}\right)^{|k|}$$
+
+__Part c)__
+
+```{r, echo = TRUE, fig.width = 8, fig.height = 5}
+set.seed(443)
+
+autocorrelation <- function(k) {
+    rho = 45/13*(0.6)^k - 32 / 13*(0.5)^k
+    return(rho)
+}
+
+X_t <- arima.sim(
+    model = list(ar = c(1.1, -0.3)),
+    n = 1000,
+    sd = sqrt(0.8)
+)
+
+sample_acf <- acf(X_t, lag.max = 15, plot = FALSE)$acf %>% as.vector()
+theoretical_acf <- autocorrelation(k = 0:15)
+
+rho <- tibble(lag = 0:15, sample = sample_acf, theoretical = theoretical_acf)
+
+palette <- c("Sample" = "#000000", "Theoretical" = "#00A0DD")
+
+acf_chart <- ggplot(
+    data = rho,
+    aes(x = lag)
+) +
+    geom_bar(
+        aes(y = sample, fill = "Sample"),
+        stat = "identity",
+        width = 0.1
+) +
+    geom_bar(
+        aes(y = theoretical, fill = "Theoretical"),
+        stat = "identity",
+        width = 0.1
+) +
+    geom_hline(
+        yintercept = 0,
+        linewidth = 0.5,
+        color = "#000000"
+) +
+    labs(
+        x = "Lag",
+        y = "ACF",
+        title = "Sample and Theoretical ACF",
+        fill = "Type"
+) +
+    scale_fill_manual(
+        values = palette
+)
+
+print(acf_chart)
+```
+
+Overall, there's not much difference between the theoretical and sample autocorrelation functions at smaller lags. However, the discrepancies
+get larger as the lag increases. At lag 13, the sample a.c.f flips around the $x$-axis, whereas the theoretical a.c.f continues to astymptotically
+decay towards 0. 
+
+## Question 2
+
+__Part a)__ $\medskip$
+
+Rearranging terms to isolate the AR and MA components on both sides
+
+$$X_{t} - 0.7X_{t-1} + 0.1X_{t-2} = Z_{t} - 1.3Z_{t-1} + 0.4Z_{t-2}$$ 
+
+So the characteristic polynomials are
+
+$$\phi(B) = (1 - 0.7B - 0.1B^2) \quad \quad \theta(B) = (1 - 1.3B + 0.4B^2)$$
+
+Set both equations to zero
+
+$$
+\begin{aligned}
+\phi(B) = 0 & \implies (1 - 0.7B + 0.1B^2) = 0 \\
+& \implies (1 - 0.5B)(1 - 0.2B) = 0 \\
+& \implies B = 2.0, 5.0
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\theta(B) = 0 & \implies (1 - 1.3B + 0.4B^2) = 0 \\
+& \implies (1 - 0.8B)(1 - 0.5B) = 0 \\
+& \implies B = 1.25, 2.0
+\end{aligned}
+$$
+
+Since both $\phi(B)$ and $\theta(B)$ have roots > 1, then the ARMA process is stationary
+and invertible. $\medskip$
+
+__Part b)__ $\medskip$
+
+To get the weights for the $\text{MA}(\infty)$ process, we have
+
+$$\psi(B) = \theta(B)/\phi(B)$$
+
+We then get
+
+$$
+\begin{aligned}
+\theta(B)/\phi(B) &= \frac{(1 - 0.8B)(1 - 0.5B)}{(1 - 0.5B)(1 - 0.2B)} \\ \medskip
+& = (1 - 0.8B)(1 - 0.2B)^{-1} \\
+& = (1 - 0.8B)(1 + 0.2B + 0.2^2B^2 + ... ) \\
+& = 1 - 0.6B - 0.12B^2 - 0.024B^3 + ... \\
+\end{aligned}
+$$ 
+
+So the weights for the $\text{MA}(\infty)$ process are
+
+$$\psi_0 = 1, \quad \quad \psi_i = -0.6 \times 0.2^{i - 1} \quad \text{for} \quad i = 1, 2,...$$
+
+Which can be written more precisely as
+
+$$X_{t} = Z_{t} + (-0.6) \sum_{i = 1}^{\infty} 0.2^{i-1}Z_{t-i}$$
+
+\clearpage
+
+__Part c)__ $\medskip$
+
+To get the the weights for the $\text{AR}(\infty)$ process, we have
+
+$$\pi(B) = \phi(B)/\theta(B)$$
+
+We then get
+
+$$
+\begin{aligned}
+\phi(B)/\theta(B) & = \frac{(1 - 0.5B)(1 - 0.2B)}{(1 - 0.8B)(1 - 0.5B)} \\
+& = (1 - 0.2B)(1 - 0.8B)^{-1} \\
+& = (1 - 0.2B)(1 + 0.8B + 0.8^2B^2 + ... ) \\
+& = 1 + 0.6B + 0.48B^2 + 0.384B^3 + ... \\
+\end{aligned}
+$$
+
+So the weights for the $\text{AR}(\infty)$ process are
+
+$$\pi_0 = 1, \quad \quad \pi_i = 0.6 \times 0.8^{i-1} \quad \text{for} \quad i = 1, 2,...$$
+
+Which can be written more precisely as
+
+$$X_t = 0.6 \sum_{i = 1}^{\infty} 0.8^{i-1}X_{t-i}$$
+
+__Part d)__ $\medskip$
+
+We already know that $\rho(0) = 1$ for any ARMA process since $\text{Cov}(X_{t}, X_{t+1}) = 1$. To find $\rho(h)$ more generally,
+the $\text{MA}(\infty)$ process derived above in b) might be more convenient. $\medskip$
+
+The autocovariances $\gamma$ are
+
+$$
+\begin{aligned}
+\gamma(h) & = \text{Cov}(X_{t}, X_{t+h}) \\
+& = \text{Cov}(\beta_{0}Z_{t} +...+ \beta_{q}Z_{t-q}, \beta_{0}Z_{t+k} +...+ \beta_{q}Z_{t+h-q}) \\
+& = \sigma^2 \textstyle \sum_{i=0}^{\infty} \beta_{i}\beta_{i+h} \\
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\gamma(h+1) & = \text{Cov}(X_{t}, X_{t+h+1}) \\
+& = \text{Cov}(\beta_{0}Z_{t} +...+ \beta_{q}Z_{t-q}, \beta_{0}Z_{t+h+1}+...+ \beta_{q}Z_{t+h-q+1}) \\
+& = \sigma^2 \textstyle \sum_{i=0}^{\infty} \beta_{i}\beta_{i+h+1} \\
+\end{aligned}
+$$
+
+Expressing $\rho(h)$ as $\gamma(h+1)/\gamma(h)$, we get
+
+$$\rho(h) = \frac{\sigma^2 \textstyle \sum_{i=0}^{\infty} \beta_{i}\beta_{i+h+1}}{\sigma^2 \textstyle \sum_{i=0}^{\infty} \beta_{i}\beta_{i+h}} = \frac{\textstyle \sum_{i=0}^{\infty} \beta_{i}\beta_{i+h+1}}{\textstyle \sum_{i=0}^{\infty} \beta_{i}\beta_{i+h}}$$
+
+Note: Since the MA($\infty$) process can only be expressed as an infinite sum for $t \geq 1$ in this case, I wasn't sure how to plug in
+the actual weights since $\beta_{0}$ isn't expressed as a product like the other weights are, so I've just left it in general form. The 
+work above also used some handy results from page 48 of the Chatfield textbook in case you're wondering.
+
+\clearpage
+
+## Question 3
+
+A SARIMA process of order $(0, 2, 1) \times (1, 1, 1)_4$ implies the following model specification
+
+$$\phi_{0}(B)\Phi_{1}(B^4)W_{t} = \theta_{1}\Theta_{1}(B^4)Z_{t} \quad \text{where} \quad W_{t} = \nabla^{2}\nabla_{4}^{1}$$
+
+However, it's probably more convenient to express the model in terms of $B$.
+
+$$(1 - \Phi B^4)W_{t} = (1 + \theta B)(1 + \Theta B^4)Z_{t}$$
+
+We can then expand all the stuff in the brackets to get
+
+$$
+\begin{aligned}
+W_{t} - \Phi B^{4}W_{t} & = (1 + \theta B + \Theta B^4 + \theta\Theta B^5)Z_{t} \\
+& = Z_{t} + \theta Z_{t-1} + \Theta Z_{t-4} + \theta\Theta Z_{t-5}
+\end{aligned}
+$$
+
+Applying difference operators to $W_{t}$ gives
+
+$$
+\begin{aligned}
+W_{t} & = \nabla^{2}\nabla_{4}X_{t} \\
+& = \nabla\nabla_{4}X_{t} - \nabla\nabla_{4}X_{t-1} \\
+& = (\nabla_{4}X_{t} - \nabla_{4}X_{t-1}) - (\nabla_{4}X_{t-1} - \nabla_{4}X_{t-2}) \\
+& = [(X_{t} - X_{t-4}) - (X_{t-1} - X_{t-5})] - [(X_{t-1} - X_{t-5}) - (X_{t-2} - X_{t-6})] \\
+& = (X_{t} - X_{t-1} - X_{t-4} + X_{t-5}) - (X_{t-1} - X_{t-5} - X_{t-2} + X_{t-6}) \\
+& = X_{t} - 2X_{t-1} + X_{t-2} - X_{t-4} + 2X_{t-5} - X_{t-6}
+\end{aligned}
+$$
+
+Taking into account that $\Phi B^4 W_{t} = \Phi W_{t-4}$, we get
+
+$$\Phi W_{t-4} = \Phi X_{t-4} - 2\Phi X_{t-5} + \Phi X_{t-6} - \Phi X_{t-8} + 2\Phi X_{t-9} - \Phi X_{t-10}$$
+
+All that's left now is to difference the $W_{t}$ terms.
+
+$$
+\begin{aligned}
+W_{t} - \Phi W_{t-4} & = (X_{t} - 2X_{t-1} + X_{t-2} - X_{t-4} + 2X_{t-5} - X_{t-6}) - (\Phi X_{t-4} - 2\Phi X_{t-5} + \Phi X_{t-6} - \Phi X_{t-8} + 2\Phi X_{t-9} - \Phi X_{t-10}) \\
+& = X_{t} - 2X_{t-1} + X_{t-2} - X_{t-4} + 2X_{t-5} - X_{t-6} - X_{t-4} - 2X_{t-5} + X_{t-6} - X_{t-8} + 2X_{t-9} - X_{t-10}
+\end{aligned}
+$$
+
+So the model can be written as $\medskip$
+
+$X_{t} - 2X_{t-1} + X_{t-2} - (1 + \Phi)X_{t-4} + (2 + 2\Phi)X_{t-5} - (1 + \Phi)X_{t-6} - \Phi X_{t-8} + 2\Phi X_{t-9} - \Phi X_{t-10} = Z_{t} + \theta Z_{t-1} + \Theta Z_{t-4} + \theta\Theta Z_{t-5}$ $\medskip$
+
+which is equivalent to an ARMA(10, 5) process.
