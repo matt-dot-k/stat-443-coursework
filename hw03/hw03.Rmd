@@ -1,0 +1,158 @@
+---
+title: Assignment 3
+author: Matthew Kielar
+date: "`r Sys.Date()`"
+output:
+    bookdown::pdf_document2:
+        number_sections: false
+        toc: false
+---
+
+```{r setup, message = FALSE}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(lubridate)
+library(tseries)
+```
+
+## Question 1
+
+```{r, include = FALSE, echo = FALSE}
+plot_theme <- theme(
+    plot.title = element_text(
+        size = 16, face = "bold", hjust = 0),
+    plot.subtitle = element_text(
+        size = 12, hjust = 0),
+    axis.title = element_text(
+        size = 12, face = "bold"),
+    axis.text = element_text(
+        size = 12),
+    legend.title = element_text(
+        size = 12, face = "bold"),
+    legend.text = element_text(
+        size = 12),
+    axis.ticks.length = unit(0.25, "cm"),
+    axis.line = element_line(
+        linewidth = 0.7, color = "#000000"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_line(
+        linewidth = 0.1, color = "gray50"),
+    panel.grid.major.y = element_line(
+        linewidth = 0.1, color = "gray50"),
+    panel.border = element_rect(
+        color = "#000000", fill = NA, size = 1.0),
+    panel.background = element_rect(
+        fill = "#FFFFFF"),
+    plot.background = element_rect(
+        fill = "#FFFFFF"),
+    legend.position = "top",
+    legend.justification = "left"
+)
+
+theme_set(plot_theme)
+```
+
+__Part a)__
+
+```{r, echo = TRUE, message = FALSE}
+#' @param alpha Coefficient of the AR(1) process
+#' @param mu Mean of the AR(1) process
+#' @param n The length of the time-series to simulate
+#' @param iter Number of iterations to run the simulation for
+
+ar_simulation <- function(alpha, mu = 2, n = 500, iter = 5000) {
+    # Switch between variances
+    if (alpha == 0) {
+        var <- 0.25 / (1 - 0.8^2)
+    } else {
+        var <- 0.25
+    }
+
+    # Switch between model specifications
+    if (alpha == 0) {
+        mod <- list()
+    } else {
+        mod <- list(ar = c(alpha))
+    }
+
+    # Pre-allocate space
+    mu_hat <- double(iter)
+
+    # Run the simulation
+    for (i in 1:iter) {
+        simul <- arima.sim(
+            model = mod, n = n, sd = sqrt(var)) + mu
+        mu_hat[i] <- mean(simul)
+    }
+    out <- list(
+        xbar = mean(mu_hat),
+        sd = sd(mu_hat),
+        means = mu_hat)
+    return(out)
+}
+```
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+simul_1 <- ar_simulation(alpha = -0.8)
+simul_2 <- ar_simulation(alpha = 0.0)
+simul_3 <- ar_simulation(alpha = 0.8)
+```
+
+Shown below is the summary table with the empirical mean and standard deviation 
+of $\bar{x}$
+
+| $\alpha$ | $\bar{x}$ | $\hat{\sigma}$ |
+| -------- | --------- | -------------- |
+|   -0.8   |  1.9999   |     0.0127     |
+|    0.0   |  2.0003   |     0.0375     |
+|    0.8   |  1.9996   |     0.1113     |
+
+__Part b)__
+
+```{r, echo = TRUE, message = FALSE}
+mean_data <- tibble(
+    xbar_1 = simul_1$means,
+    xbar_2 = simul_2$means,
+    xbar_3 = simul_3$means,
+)
+
+colors <- c("-0.8" = "#990F3D", "0.0" = "#FF7FAA", "0.8" = "#0F5499")
+
+density_chart <- ggplot(
+    data = mean_data
+) +
+    geom_density(
+        aes(
+            x = xbar_1, color = "-0.8"),
+        linewidth = 1.2
+) +
+    geom_density(
+        aes(
+            x = xbar_2, color = "0.0"),
+        linewidth = 1.2
+) +
+    geom_density(
+        aes(
+            x = xbar_3, color = "0.8"),
+        linewidth = 1.2
+) +
+    geom_segment(
+        aes(
+            x = 2, y = 0, xend = 2, yend = 33),
+        linewidth = 0.8
+) +
+    labs(
+        x = "Sample Mean",
+        y = "Density",
+        title = "Sampling Densities of 3 Different AR(1) Processes",
+        color = "Alpha"
+) +
+    scale_color_manual(
+        values = colors
+)
+
+print(density_chart)
+```
+
