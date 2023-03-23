@@ -13,7 +13,7 @@ library(dplyr)
 library(readr)
 library(ggplot2)
 library(lubridate)
-library(tseries)
+library(forecast)
 ```
 
 ## Question 1
@@ -42,7 +42,7 @@ plot_theme <- theme(
     panel.grid.major.y = element_line(
         linewidth = 0.1, color = "gray50"),
     panel.border = element_rect(
-        color = "#000000", fill = NA, size = 1.0),
+        color = "#000000", fill = NA, linewidth = 1.0),
     panel.background = element_rect(
         fill = "#FFFFFF"),
     plot.background = element_rect(
@@ -57,11 +57,6 @@ theme_set(plot_theme)
 __Part a)__
 
 ```{r, echo = TRUE, message = FALSE}
-#' @param alpha Coefficient of the AR(1) process
-#' @param mu Mean of the AR(1) process
-#' @param n The length of the time-series to simulate
-#' @param iter Number of iterations to run the simulation for
-
 ar_simulation <- function(alpha, mu = 2, n = 500, iter = 5000) {
     # Switch between variances
     if (alpha == 0) {
@@ -124,23 +119,19 @@ density_chart <- ggplot(
     data = mean_data
 ) +
     geom_density(
-        aes(
-            x = xbar_1, color = "-0.8"),
+        aes(x = xbar_1, color = "-0.8"),
         linewidth = 1.2
 ) +
     geom_density(
-        aes(
-            x = xbar_2, color = "0.0"),
+        aes(x = xbar_2, color = "0.0"),
         linewidth = 1.2
 ) +
     geom_density(
-        aes(
-            x = xbar_3, color = "0.8"),
+        aes(x = xbar_3, color = "0.8"),
         linewidth = 1.2
 ) +
     geom_segment(
-        aes(
-            x = 2, y = 0, xend = 2, yend = 33),
+        aes(x = 2, y = 0, xend = 2, yend = 33),
         linewidth = 0.8
 ) +
     labs(
@@ -156,3 +147,212 @@ density_chart <- ggplot(
 print(density_chart)
 ```
 
+\clearpage
+
+## Question 2
+
+__Part a)__
+
+```{r, echo = TRUE, message = FALSE}
+gdp <- read_csv("./data/canadaGDP.csv", col_names = TRUE) %>%
+    rename(date = `...1`) %>%
+    mutate(date = ymd(date))
+
+log_gdp <- tibble(
+    date = gdp$date[13:276],
+    growth = diff(log(gdp$GDP), lag = 12)
+)
+
+gdp_train <- log_gdp %>%
+    filter(date >= "2010-01-01" & date <= "2017-12-01") %>%
+    select(growth) %>%
+    ts(start = c(2010, 01), frequency = 12)
+
+gdp_test <- log_gdp %>%
+    filter(date >= "2018-01-01") %>%
+    select(growth) %>%
+    ts(start = c(2018, 01), frequency = 12)
+
+gdp_chart <- ggplot(
+    data = gdp_train,
+    aes(x = date, y = growth)
+) +
+    geom_line(
+        linewidth = 1.2,
+        color = "#990F3D"
+) +
+    labs(
+        x = "Date",
+        y = "Growth Rate",
+        title = "Annualized log-growth rate of Canadian GDP"
+)
+
+print(gdp_chart)
+
+acf(gdp_train, lag.max = 100, main = "ACF")
+pacf(gdp_train, lag.max = 100, main = "PACF")
+```
+
+The ACF plot shows the damped sine wave pattern strongly resembled by
+an AR process. While the PACF behaves pretty erratically and has multiple
+cutoff points, it's clear that the AR($p$) class of models is suitable here.
+
+__Part b)__
+
+```{r, echo = TRUE, message = FALSE}
+model_selector <- function(data, max_order) {
+    # Pre-allocate space
+    aic <- double(max_order)
+
+    # Fit AR model for each order and get AIC
+    for (i in 1:max_order) {
+        mod <- arima(data, order = c(i, 0, 0), method = "ML")
+        aic[i] <- mod$aic
+    }
+    out <- list(
+        best_order = which.min(aic), aic = min(aic)
+    )
+    return(out)
+}
+
+model_selector(gdp_train, max_order = 12)
+```
+
+A max order of 12 seems reasonable since we're dealing with monthly data.
+Based on the above output, an AR(9) model minimizes AIC and therefore seems
+the most appropriate.
+
+__Part c)__
+
+```{r, echo = TRUE, message = FALSE}
+ar_mod <- arima(gdp_train, order = c(9, 0, 0), method = "ML")
+tsdiag(ar_mod)
+```
+
+The diagnostic plots above indicate a reasonably well fitting model. Standardized
+residuals resemble a white noise process, and the ACF of the residuals is similar 
+to that of a WN process. All of the p-values for the Ljung-Box test are greater 
+than 0.05, which also indicates that the data are not serially correlated.
+
+```{r, echo = TRUE, message = FALSE}
+ar_forecast <- forecast(ar_mod, h = 24)
+
+ar_data <- ar_forecast %>%
+    as_tibble() %>%
+    mutate(
+        date = seq(ym("2018-01"), ym("2019-12"), by = "1 month"),
+        actual = as.vector(gdp_test)) %>%
+    select(-`Lo 80`, -`Hi 80`) %>%
+    rename(
+        forecast = `Point Forecast`,
+        lower = `Lo 95`,
+        upper = `Hi 95`) %>%
+    relocate(c(date, actual), .before = forecast)
+
+colors <- c(
+    "Actual" = "#000000", "AR(9)" = "#0F5499", "Exponential" = "#00A0DD",
+    "PI (AR)" = "#990F3D", "PI (Exp)" = "#FF7FAA"
+)
+
+ar_chart <- ggplot(
+    data = ar_data,
+    aes(x = date)
+) +
+    geom_line(
+        aes(y = actual, color = "Actual"),
+        linewidth = 1.2
+) +
+    geom_line(
+        aes(y = forecast, color = "AR(9)"),
+        linewidth = 1.2
+) +
+    geom_line(
+        aes(y = lower, color = "PI (AR)"),
+        linewidth = 1.0,
+        linetype = "dashed"
+) +
+    geom_line(
+        aes(y = upper, color = "PI (AR)"),
+        linewidth = 1.0,
+        linetype = "dashed"
+) +
+    labs(
+        x = "Date",
+        y = "Growth Rate",
+        title = "Forecasted vs. Actual Growth Rates",
+        color = "Series"
+) +
+    scale_color_manual(
+        values = colors
+)
+
+print(ar_chart)
+```
+
+__Part e)__
+
+```{r, echo = TRUE, message = FALSE}
+exp_mod <- HoltWinters(
+    x = gdp_train_ts,
+    start.periods = 2,
+)
+
+exp_forecast <- forecast(hw_mod, h = 24)
+
+exp_data <- hw_forecast %>%
+    as_tibble() %>%
+    mutate(
+        date = seq(ym("2018-01"), ym("2019-12"), by = "1 month"),
+        actual = as.vector(gdp_test)) %>%
+    select(-`Lo 80`, -`Hi 80`) %>%
+    rename(
+        forecast = `Point Forecast`,
+        lower = `Lo 95`,
+        upper = `Hi 95`) %>%
+    relocate(c(date, actual), .before = forecast)
+
+exp_chart <- ar_chart +
+    geom_line(
+        data = hw_data,
+        aes(x = date, y = forecast, color = "Exponential"),
+        linewidth = 1.2
+) +
+    geom_line(
+        data = hw_data,
+        aes(x = date, y = lower, color = "PI (Exp)"),
+        linewidth = 1.0,
+        linetype = "dashed"
+) +
+    geom_line(
+        data = hw_data,
+        aes(x = date, y = upper, color = "PI (Exp)"),
+        linewidth = 1.0,
+        linetype = "dashed"
+)
+
+print(hw_chart)
+```
+
+__Part f)__
+
+```{r, echo = TRUE, message = FALSE}
+mean_sq_err <- function(obs, pred) {
+    diff_sq  <- (obs - pred)^2
+    mse <- mean(diff_sq)
+    return(mse)
+}
+
+mean_sq_err(ar_data$actual, ar_data$forecast)
+mean_sq_err(exp_data$actual, exp_data$forecast)
+```
+
+Since exponential smoothing has a significantly wider prediction interval,
+the forecast is less accurate since there's a wider possible range for it to 
+fall into. Furthermore, it also has a higher MSE than the AR forecast, which
+also indicates that it's slightly less accurate. 
+
+Although I'd be inclined to suggest the AR model in this case, both methods
+have relevant pros and cons that should be considered. Exponential smoothing 
+can easily deal with non-stationary data by adding extra smoothing parameters,
+but requires a decent amount of data to estimate. AR models on the other hand
+can be estimated reliably and are much better suited for inference.
