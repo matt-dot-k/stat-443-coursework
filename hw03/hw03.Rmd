@@ -195,7 +195,7 @@ pacf(gdp_train, lag.max = 100, main = "PACF")
 
 The ACF plot shows the damped sine wave pattern strongly resembled by
 an AR process. While the PACF behaves pretty erratically and has multiple
-cutoff points, it's clear that the AR($p$) class of models is suitable here.
+cutoff points, it's clear that the AR($p$) class of models is suitable here. $\medskip$
 
 __Part b)__
 
@@ -220,7 +220,7 @@ model_selector(gdp_train, max_order = 12)
 
 A max order of 12 seems reasonable since we're dealing with monthly data.
 Based on the above output, an AR(9) model minimizes AIC and therefore seems
-the most appropriate.
+the most appropriate. $\medskip$
 
 __Part c)__
 
@@ -232,7 +232,9 @@ tsdiag(ar_mod)
 The diagnostic plots above indicate a reasonably well fitting model. Standardized
 residuals resemble a white noise process, and the ACF of the residuals is similar 
 to that of a WN process. All of the p-values for the Ljung-Box test are greater 
-than 0.05, which also indicates that the data are not serially correlated.
+than 0.05, which also indicates that the data are not serially correlated. $\medskip$
+
+__Part d)__
 
 ```{r, echo = TRUE, message = FALSE}
 ar_forecast <- forecast(ar_mod, h = 24)
@@ -297,9 +299,9 @@ exp_mod <- HoltWinters(
     start.periods = 2,
 )
 
-exp_forecast <- forecast(hw_mod, h = 24)
+exp_forecast <- forecast(exp_mod, h = 24)
 
-exp_data <- hw_forecast %>%
+exp_data <- exp_forecast %>%
     as_tibble() %>%
     mutate(
         date = seq(ym("2018-01"), ym("2019-12"), by = "1 month"),
@@ -349,10 +351,106 @@ mean_sq_err(exp_data$actual, exp_data$forecast)
 Since exponential smoothing has a significantly wider prediction interval,
 the forecast is less accurate since there's a wider possible range for it to 
 fall into. Furthermore, it also has a higher MSE than the AR forecast, which
-also indicates that it's slightly less accurate. 
+also indicates that it's slightly less accurate. $\medskip$
 
 Although I'd be inclined to suggest the AR model in this case, both methods
 have relevant pros and cons that should be considered. Exponential smoothing 
 can easily deal with non-stationary data by adding extra smoothing parameters,
 but requires a decent amount of data to estimate. AR models on the other hand
 can be estimated reliably and are much better suited for inference.
+
+\clearpage
+
+## Question 3
+
+__Part a)__
+
+```{r, echo = TRUE, message = FALSE}
+co2_data <- read_csv("./data/co2_mm_gl.csv", col_names = TRUE) %>%
+    select(average) %>%
+    mutate(
+        date = seq(ym("1979-01"), ym("2022-10"), by = "1 month")) %>%
+    relocate(date, .before = average)
+
+co2_train <- co2_data %>%
+    filter(date <= "2019-12-01") %>%
+    select(average) %>%
+    ts(start = c(1979, 01), frequency = 12)
+
+co2_test  <- co2_data %>%
+    filter(date >= "2020-01-01") %>%
+    select(average) %>%
+    ts(start = c(2020, 01), frequency = 12)
+```
+
+__Part b)__ $\medskip$
+
+*Part i)*
+
+```{r, echo = TRUE, message = FALSE}
+s_diff <- diff(co2_train, lag = 12)
+
+s_diff_chart <- autoplot(
+    s_diff,
+    linewidth = 1.2
+) +
+    labs(
+        x = "Date",
+        y = "Average Temperature",
+        title = "Seasonally Differenced CO2 Levels"
+)
+
+print(s_diff_chart)
+acf(s_diff, lag.max = 100, main = "ACF")
+```
+
+The plot of the seasonally differenced series seems to be an improvement,
+although there is a bit of an upward trend in the second half. The ACF also
+doesn't follow any pattern associated with the ARIMA family. As such, it seems
+somewhat suitable to apply another differencing step. $\medskip$
+
+*Part ii)*
+
+```{r, echo = TRUE, message = FALSE}
+d_diff <- diff(s_diff, lag = 1)
+
+d_diff_chart <- autoplot(
+    d_diff,
+    linewidth = 1.2
+) +
+    labs(
+        x = "Date",
+        y = "Average Temperature",
+        title = "Differenced CO2 Levels"
+)
+
+print(d_diff_chart)
+```
+
+The new differenced series looks a lot better. There's no visible trend on
+display and the series looks stationary enough for an ARIMA model. $\medskip$
+
+*Part iii)* $\medskip$
+
+Based on the charts above, I would choose $d = 1$, $D = 1$, and $s = 12$. $\medskip$
+
+*Part iv)* 
+
+```{r, echo = TRUE, message = FALSE}
+acf(d_diff, lag.max = 100, main = "ACF")
+pacf(d_diff, lag.max = 100, main = "PACF")
+```
+
+The ACF tails off like it does in the AR case with a damped since wave pattern. The
+PACF is a bit more unusual but it gradually tails off as the lags increase. $\medskip$
+
+As such, suitable order values could be as follows:
+
+$$p = 1 \quad \quad P = 1 \quad \quad q = 1 \quad \quad Q = 1$$
+
+*Part v)*
+
+```{r, echo = TRUE, message = FALSE}
+arima_mod <- auto.arima()
+```
+
