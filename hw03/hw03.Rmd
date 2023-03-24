@@ -4,6 +4,7 @@ author: Matthew Kielar
 date: "`r Sys.Date()`"
 output:
     bookdown::pdf_document2:
+        highlight: kate
         number_sections: false
         toc: false
 ---
@@ -21,7 +22,8 @@ library(forecast)
 ```{r, include = FALSE, echo = FALSE}
 plot_theme <- theme(
     plot.title = element_text(
-        size = 16, face = "bold", hjust = 0),
+        size = 16, face = "bold", hjust = 0,
+        margin = margin(b = 0.1, unit = "cm")),
     plot.subtitle = element_text(
         size = 12, hjust = 0),
     axis.title = element_text(
@@ -113,7 +115,7 @@ mean_data <- tibble(
     xbar_3 = simul_3$means,
 )
 
-colors <- c("-0.8" = "#990F3D", "0.0" = "#FF7FAA", "0.8" = "#0F5499")
+palette_1 <- c("-0.8" = "#990F3D", "0.0" = "#FF7FAA", "0.8" = "#0F5499")
 
 density_chart <- ggplot(
     data = mean_data
@@ -141,11 +143,18 @@ density_chart <- ggplot(
         color = "Alpha"
 ) +
     scale_color_manual(
-        values = colors
+        values = palette_1
 )
 
 print(density_chart)
 ```
+
+Bias doesn't look like much of a concern here since simulating 5000 AR processes 
+is going to result in the grand mean being marginally different from $\mathbb{E}[X]$
+to the point where it doesn't really matter. On the other hand, the variance of the
+distribution of $\bar{X}$ increases with $\alpha$, which isn't surprising since a
+larger AR coefficient results in greater variance in the data and hence a wider 
+distribution of means across multiple simulated processes.
 
 \clearpage
 
@@ -153,7 +162,7 @@ print(density_chart)
 
 __Part a)__
 
-```{r, echo = TRUE, message = FALSE}
+```{r, echo = TRUE, message = FALSE, fig.width = 8, fig.height = 5}
 gdp <- read_csv("./data/canadaGDP.csv", col_names = TRUE) %>%
     rename(date = `...1`) %>%
     mutate(date = ymd(date))
@@ -173,31 +182,34 @@ gdp_test <- log_gdp %>%
     select(growth) %>%
     ts(start = c(2018, 01), frequency = 12)
 
-gdp_chart <- ggplot(
-    data = gdp_train,
-    aes(x = date, y = growth)
-) +
-    geom_line(
-        linewidth = 1.2,
-        color = "#990F3D"
+gdp_chart <- autoplot(
+    gdp_train,
+    linewidth = 1.2,
+    color = "#990F3D"
 ) +
     labs(
         x = "Date",
-        y = "Growth Rate",
-        title = "Annualized log-growth rate of Canadian GDP"
+        y = "log-Growth Rate",
+        title = "log-Growth Rate of Canadian GDP"
 )
 
 print(gdp_chart)
+```
 
+```{r, echo = TRUE, message = FALSE, fig.width = 8, fig.height = 5}
 acf(gdp_train, lag.max = 100, main = "ACF")
 pacf(gdp_train, lag.max = 100, main = "PACF")
 ```
 
-The ACF plot shows the damped sine wave pattern strongly resembled by
-an AR process. While the PACF behaves pretty erratically and has multiple
-cutoff points, it's clear that the AR($p$) class of models is suitable here. $\medskip$
+The ACF plot shows the damped sine wave pattern strongly resembled by an AR 
+process. While the PACF behaves pretty erratically and has multiple cutoff 
+points, it's clear that the AR($p$) class of models is suitable here. $\medskip$
 
-__Part b)__
+__Part b)__ $\medskip$
+
+The function below fits an AR(p) model for each value of $p$ up to and including 
+``max_order``, stores the AIC for each model, and then returns the order of 
+the model with the lowest AIC.
 
 ```{r, echo = TRUE, message = FALSE}
 model_selector <- function(data, max_order) {
@@ -218,16 +230,17 @@ model_selector <- function(data, max_order) {
 model_selector(gdp_train, max_order = 12)
 ```
 
-A max order of 12 seems reasonable since we're dealing with monthly data.
-Based on the above output, an AR(9) model minimizes AIC and therefore seems
-the most appropriate. $\medskip$
+A maximum order of 12 seemed reasonable since we're dealing with monthly data. 
+Based on the above output, an AR(9) model is the most suitable here. $\medskip$
 
 __Part c)__
 
-```{r, echo = TRUE, message = FALSE}
+```{r, echo = TRUE, message = FALSE, fig.width = 8, fig.height = 8}
 ar_mod <- arima(gdp_train, order = c(9, 0, 0), method = "ML")
 tsdiag(ar_mod)
 ```
+
+\clearpage
 
 The diagnostic plots above indicate a reasonably well fitting model. Standardized
 residuals resemble a white noise process, and the ACF of the residuals is similar 
@@ -251,10 +264,8 @@ ar_data <- ar_forecast %>%
         upper = `Hi 95`) %>%
     relocate(c(date, actual), .before = forecast)
 
-colors <- c(
-    "Actual" = "#000000", "AR(9)" = "#0F5499", "Exponential" = "#00A0DD",
-    "PI (AR)" = "#990F3D", "PI (Exp)" = "#FF7FAA"
-)
+palette_2 <- c("Actual" = "#000000", "AR(9)" = "#0F5499", "Exponential" = "#00A0DD",
+               "PI (AR)" = "#990F3D", "PI (Exp)" = "#FF7FAA")
 
 ar_chart <- ggplot(
     data = ar_data,
@@ -285,7 +296,7 @@ ar_chart <- ggplot(
         color = "Series"
 ) +
     scale_color_manual(
-        values = colors
+        values = palette_2
 )
 
 print(ar_chart)
@@ -295,7 +306,7 @@ __Part e)__
 
 ```{r, echo = TRUE, message = FALSE}
 exp_mod <- HoltWinters(
-    x = gdp_train_ts,
+    x = gdp_train,
     start.periods = 2,
 )
 
@@ -315,25 +326,27 @@ exp_data <- exp_forecast %>%
 
 exp_chart <- ar_chart +
     geom_line(
-        data = hw_data,
+        data = exp_data,
         aes(x = date, y = forecast, color = "Exponential"),
         linewidth = 1.2
 ) +
     geom_line(
-        data = hw_data,
+        data = exp_data,
         aes(x = date, y = lower, color = "PI (Exp)"),
         linewidth = 1.0,
         linetype = "dashed"
 ) +
     geom_line(
-        data = hw_data,
+        data = exp_data,
         aes(x = date, y = upper, color = "PI (Exp)"),
         linewidth = 1.0,
         linetype = "dashed"
 )
 
-print(hw_chart)
+print(exp_chart)
 ```
+
+\clearpage
 
 __Part f)__
 
@@ -385,9 +398,9 @@ co2_test  <- co2_data %>%
 
 __Part b)__ $\medskip$
 
-*Part i)*
+__i)__
 
-```{r, echo = TRUE, message = FALSE}
+```{r, echo = TRUE, message = FALSE, fig.height = 5, fig.width = 8}
 s_diff <- diff(co2_train, lag = 12)
 
 s_diff_chart <- autoplot(
@@ -396,7 +409,7 @@ s_diff_chart <- autoplot(
 ) +
     labs(
         x = "Date",
-        y = "Average Temperature",
+        y = "Average CO2 Level",
         title = "Seasonally Differenced CO2 Levels"
 )
 
@@ -404,14 +417,16 @@ print(s_diff_chart)
 acf(s_diff, lag.max = 100, main = "ACF")
 ```
 
+\clearpage
+
 The plot of the seasonally differenced series seems to be an improvement,
 although there is a bit of an upward trend in the second half. The ACF also
 doesn't follow any pattern associated with the ARIMA family. As such, it seems
 somewhat suitable to apply another differencing step. $\medskip$
 
-*Part ii)*
+__ii & iii)__
 
-```{r, echo = TRUE, message = FALSE}
+```{r, echo = TRUE, message = FALSE, fig.height = 5, fig.width = 8}
 d_diff <- diff(s_diff, lag = 1)
 
 d_diff_chart <- autoplot(
@@ -420,7 +435,7 @@ d_diff_chart <- autoplot(
 ) +
     labs(
         x = "Date",
-        y = "Average Temperature",
+        y = "Average CO2 Level",
         title = "Differenced CO2 Levels"
 )
 
@@ -428,29 +443,114 @@ print(d_diff_chart)
 ```
 
 The new differenced series looks a lot better. There's no visible trend on
-display and the series looks stationary enough for an ARIMA model. $\medskip$
+display and the series looks stationary enough for an ARIMA model. Based on 
+the charts above, I would choose $d = 1$, $D = 1$, and $s = 12$. $\medskip$
 
-*Part iii)* $\medskip$
+__iv)__ 
 
-Based on the charts above, I would choose $d = 1$, $D = 1$, and $s = 12$. $\medskip$
-
-*Part iv)* 
-
-```{r, echo = TRUE, message = FALSE}
+```{r, echo = TRUE, message = FALSE, fig.height = 5, fig.width = 8}
 acf(d_diff, lag.max = 100, main = "ACF")
 pacf(d_diff, lag.max = 100, main = "PACF")
 ```
+
+\clearpage
 
 The ACF tails off like it does in the AR case with a damped since wave pattern. The
 PACF is a bit more unusual but it gradually tails off as the lags increase. $\medskip$
 
 As such, suitable order values could be as follows:
 
-$$p = 1 \quad \quad P = 1 \quad \quad q = 1 \quad \quad Q = 1$$
+$$p = 2 \quad \quad P = 2 \quad \quad q = 1 \quad \quad Q = 1$$
 
-*Part v)*
+__v)__
 
 ```{r, echo = TRUE, message = FALSE}
-arima_mod <- auto.arima()
+auto.arima(co2_train,
+           max.p = 5, max.q = 5,
+           max.P = 2, max.Q = 2,
+           max.d = 1, max.D = 1,
+           seasonal = TRUE
+)
 ```
 
+The results of the stepwise search suggest that a SARIMA$(2,1,2) \times (2,1,2)_{12}$ model
+is the best one. $\medskip$
+
+__Part c)__
+
+```{r, echo = TRUE, message = FALSE}
+arima_mod <- arima(
+    co2_train, order = c(2, 1, 2), seasonal = list(
+        order = c(2, 1, 2), period = 12)
+)
+```
+
+__Part d)__
+
+```{r, echo = TRUE, message = FALSE, fig.height = 8, fig.width = 8}
+tsdiag(arima_mod)
+```
+
+Overall, the model seems to fit the data reasonably well. Residuals statisfy
+the condition of resembling a WN process, and the ACF of residuals looks like
+that of a white noise series. The p-values of the Ljung-Box test are all 
+insignificant, which indicates that the data are independently distributed. $\medskip$
+
+__Part e)__
+
+```{r, echo = TRUE, message = FALSE}
+arima_forecast <- forecast(arima_mod, h = 34)
+
+arima_data <- arima_forecast %>%
+    as_tibble() %>%
+    mutate(
+        date = seq(ym("2020-01"), ym("2022-10"), by = "1 month"),
+        actual = as.vector(co2_test)) %>%
+    select(-`Lo 80`, -`Hi 80`) %>%
+    rename(
+        forecast = `Point Forecast`,
+        lower = `Lo 95`,
+        upper = `Hi 95`) %>%
+    relocate(c(date, actual), .before = forecast)
+
+palette_3 <- c("Actual" = "#000000", "SARIMA" = "#0F5499", "PI" = "gray50")
+
+arima_chart <- ggplot(
+    data = arima_data,
+    aes(x = date)
+) +
+    geom_line(
+        aes(y = actual, color = "Actual"),
+        linewidth = 1.2
+) +
+    geom_line(
+        aes(y = forecast, color = "SARIMA"),
+        linewidth = 1.2
+) +
+    geom_line(
+        aes(y = lower, color = "PI"),
+        linewidth = 1.2,
+        linetype = "dashed"
+) +
+    geom_line(
+        aes(y = upper, color = "PI"),
+        linewidth = 1.2,
+        linetype = "dashed"
+) +
+    labs(
+        x = "Date",
+        y = "Average CO2 Level",
+        title = "Forecasted vs. Actual CO2 Levels",
+        color = "Series"
+) +
+    scale_color_manual(
+        values = palette_3
+)
+
+print(arima_chart)
+```
+
+The forecasting procedure seems to work pretty well. Forecasted values follow
+the actual values quite closely and with a high degree of accuracy. Prediction
+intervals aren't too wide either, which means that forecast values into the 
+future are less likely to be all over the place.
