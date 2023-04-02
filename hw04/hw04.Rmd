@@ -7,3 +7,169 @@ output:
         number_sections: false
         toc: false
 ---
+
+```{r, echo = TRUE, message = FALSE}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(lubridate)
+```
+
+```{r, include = FALSE, echo = FALSE}
+plot_theme <- theme(
+    plot.title = element_text(
+        size = 16, face = "bold", hjust = 0,
+        margin = margin(b = 0.1, unit = "cm")),
+    plot.background = element_rect(
+        fill = "#FFFFFF"),
+    axis.title = element_text(
+        size = 12, face = "bold"),
+    axis.text = element_text(
+        size = 12),
+    axis.ticks.length = unit(0.25, units = "cm"),
+    axis.line = element_line(
+        linewidth = 0.5, color = "#000000"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.x = element_line(
+        linewidth = 0.1, color = "gray50"),
+    panel.grid.major.y = element_line(
+        linewidth = 0.1, color = "gray50"),
+    panel.background = element_rect(
+        fill = "#FFFFFF"),
+    panel.border = element_rect(
+        fill = NA, color = "#000000", linewidth = 2.0)
+)
+
+theme_set(plot_theme)
+```
+
+## Question 2
+
+__Part a)__
+
+$$
+\begin{aligned}
+\gamma(0) &= \int_{0}^{\pi} \cos(0 \cdot \omega)f(\omega)d\omega \\[15pt]
+&= \int_{0}^{\pi} f(\omega)d\omega \\[15pt]
+&= \int_{0}^{\pi} \frac{1}{8\pi} \left(1 - \frac{32}{35}\cos(\omega) + \frac{3}{5}\cos(2\omega)\right)d\omega \\[15pt]
+&= \frac{1}{8\pi} \int_{0}^{\pi} d\omega - \frac{32}{200\pi} \int_{0}^{\pi} \cos(\omega)d\omega + \frac{3}{40\pi} \int_{0}^{\pi} \cos(2\omega)d\omega \\
+\end{aligned}
+$$
+
+The integrals can then be evaluated separately
+
+$$
+\begin{aligned}
+\frac{1}{8\pi} \int_{0}^{\pi} d\omega &= \frac{1}{8\pi} \cdot \omega \bigg\rvert_{0}^{\pi} \\[15pt]
+&= \frac{1}{8\pi}(\pi - 0) \\[15pt]
+&= \frac{1}{8}
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{32}{200\pi} \int_{0}^{\pi} \cos(\omega) d\omega &= \frac{32}{200\pi} \cdot \sin(\omega) \bigg\rvert_{0}^{\pi} \\[15pt]
+&= \frac{32}{200\pi} \left(\sin(\pi) - \sin(0)\right) \\[15pt]
+&= \frac{32}{200\pi} \cdot (0 - 0) \\[15pt]
+&= 0
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{3}{40\pi} \int_{0}^{\pi} \cos(2\omega)d\omega &= \frac{3}{40\pi} \cdot \left(\frac{1}{2}\sin(2\omega)\right) \bigg\rvert_{0}^{\pi} \\[15pt]
+&= \frac{3}{40\pi} \cdot \left(\frac{1}{2}\sin(2\pi) - \frac{1}{2}\sin(0)\right) \\[15pt]
+&= \frac{3}{40\pi} \cdot \left(0 - 0\right) \\[15pt]
+&= 0
+\end{aligned}
+$$
+
+So we get 
+
+$$\underbrace{\frac{1}{8\pi} \int_{0}^{\pi}d\omega}_\textrm{1/8} - \underbrace{\frac{32}{200\pi} \int_{0}^{\pi} \cos(\omega)d\omega}_\textrm{0} + \underbrace{\frac{3}{40\pi} \int_{0}^{\pi} \cos(2\omega)d\omega}_\textrm{0} = \frac{1}{8}$$
+
+## Question 3
+
+__Part a)__
+
+```{r, echo = TRUE, message = FALSE}
+pelts <- read_table("./data/pelt.txt", col_names = FALSE) %>%
+    rename(
+        sales = `X1`) %>%
+    mutate(
+        year = seq(year("1857-01-01"), year("1910-01-01"))) %>%
+    relocate(year, .before = sales)
+
+pelts_chart <- ggplot(
+    data = pelts,
+    aes(x = year, y = sales)
+) +
+    geom_line(
+        linewidth = 1.2,
+        color = "#FF8833"
+) +
+    labs(
+        x = "Year",
+        y = "Sales",
+        title = "Pelt Sales Between 1857 and 1910"
+)
+
+print(pelts_chart)
+```
+
+This looks like a pretty standard time series with an obvious seasonal effect.
+However, the seasonal variation occurs over periods of years, rather than months
+like we've usually seen so far. Non-seasonal levels largely remain constant 
+throughout the entire time period.
+
+__Part b)__
+
+```{r, echo = TRUE, message = FALSE}
+pelts_spec <- spec.pgram(
+    ts(pelts$sales, start = c(1857), frequency = 1),
+    log = "no",
+    plot = FALSE)
+
+spec_data <- tibble(
+    freq = seq(0, 0.5, length.out = length(pelts_spec$spec)),
+    spec = pelts_spec$spec
+)
+
+spec_chart <- ggplot(
+    data = spec_data,
+    aes(x = freq, y = spec)
+) +
+    geom_line(
+        linewidth = 1.0,
+        color = "#FF0652"
+) +
+    labs(
+        x = "Frequency",
+        y = "Spectrum",
+        title = "Spectral Density of Pelt Sales"
+)
+
+print(spec_chart)
+```
+
+
+__Part c)__
+
+```{r, echo = TRUE, message = FALSE}
+#' @param series A univariate time-series
+#' @param p Placeholder constant
+
+fourier_freq <- function(series, p) {
+    # Input checks
+    if (p > length(series) / 2) {
+        stop("p cannot be greater than N/2")
+    }
+    if (is.ts(series) == FALSE) {
+        warning("'series' is not of type 'ts', coercing to ts")
+        series <- as.ts(series)
+    }
+    fft <- fft(series)
+    return(head(fft))
+}
+```
