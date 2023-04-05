@@ -44,6 +44,16 @@ plot_theme <- theme(
 theme_set(plot_theme)
 ```
 
+## Question 1
+
+__Part a)__
+
+For the above AR(2) process, we have $\phi(B) = (1 - 1.1B + 0.3B^2)$, and taking into account that
+
+$$f(\omega) = \frac{\sigma_Z^2}{\pi} = |\phi(e^{i\omega})|^2$$
+
+we get
+
 ## Question 2
 
 __Part a)__
@@ -88,6 +98,132 @@ $$
 So we get 
 
 $$\underbrace{\frac{1}{8\pi} \int_{0}^{\pi}d\omega}_\textrm{1/8} - \underbrace{\frac{32}{200\pi} \int_{0}^{\pi} \cos(\omega)d\omega}_\textrm{0} + \underbrace{\frac{3}{40\pi} \int_{0}^{\pi} \cos(2\omega)d\omega}_\textrm{0} = \frac{1}{8}$$
+
+__Part b)__
+
+$$
+\begin{aligned}
+\gamma(1) &= \int_{0}^{\pi} \cos(\omega)f(\omega)d\omega \\[15pt]
+&= \frac{1}{8\pi} \int_{0}^{\pi} \left(\cos(\omega) - \frac{32}{25}\cos^2(\omega) + \frac{3}{5}\cos(\omega)\cos(2\omega)\right) \\[15pt]
+&= \frac{1}{8\pi} \int_{0}^{\pi} \cos(\omega)d\omega - \frac{32}{200\pi} \int_{0}^{\pi} \cos^2(\omega)d\omega + \frac{3}{40\pi} \int_{0}^{\pi} \cos(\omega)\cos(2\omega)d\omega \\[15pt]
+\end{aligned}
+$$
+
+Evaluating the three integrals separately gives
+
+$$
+\begin{aligned}
+\frac{1}{8\pi} \int_{0}^{\pi} \cos(\omega)d\omega &= \frac{1}{8\pi} \cdot (\sin(\omega)) \bigg\rvert_{0}^{\pi} \\[15pt]
+&= \frac{1}{8\pi} \cdot (\sin(\pi) - \sin(0)) \\[15pt]
+&= 0
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{32}{200\pi} \int_{0}^{\pi} \cos^2(\omega) &= \frac{32}{200\pi} \int_{0}^{\pi} \left(\frac{1}{2} \cos(2\omega) + \frac{1}{2} \right)d\omega \\[15pt]
+&= \frac{32}{200\pi} \cdot \left(\frac{1}{4} \sin(2\omega) + \frac{1}{2}\omega \right) \bigg\rvert_{0}^{\pi} \\[15pt]
+&=\frac{32}{200\pi} \cdot \left[\left(\frac{1}{4} \sin(2\pi) + \frac{\pi}{2}\right) - \left(\frac{1}{4} \sin(0) + 0 \right)\right] \\[15pt]
+&= \frac{32}{200\pi} \cdot \frac{\pi}{2} \\[15pt]
+&= \frac{2}{25}
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{3}{40\pi} \int_{0}^{\pi} \cos(\omega)\cos(2\omega)d\omega &= \frac{3}{40\pi} \int_{0}^{\pi} \frac{1}{2}(\cos(3\omega) + \cos(\omega))d\omega \\[15pt]
+&= \frac{3}{40\pi} \cdot \left(\frac{1}{6}\sin(3\omega) + \frac{1}{2} \sin(\omega)\right) \bigg\rvert_{0}^{\pi} \\[15pt]
+&= \frac{3}{40\pi} \cdot \left[\left(\frac{1}{6}\sin(3\pi) + \frac{1}{2}\sin(\pi) \right) - \left(\frac{1}{6}\sin(0) + \frac{1}{2}\sin(0)\right) \right] \\[15pt]
+&= \frac{3}{40\pi} \cdot (0 - 0) \\[15pt]
+&= 0
+\end{aligned}
+$$
+
+So we get
+
+$$\underbrace{\frac{1}{8\pi} \int_{0}^{\pi} \cos(\omega)d\omega}_\textrm{0} - \underbrace{\frac{32}{200\pi} \int_{0}^{\pi} \cos^2(\omega)d\omega}_\textrm{2/25} + \underbrace{\frac{3}{40\pi} \int_{0}^{\pi} \cos(\omega)\cos(2\omega)d\omega}_\textrm{0} = -\frac{2}{25}$$
+
+__Part c)__
+
+$$
+\begin{aligned}
+\gamma(2) &= \int_0^\pi \cos(2\omega)f(\omega)d\omega \\[15pt]
+&= \frac{1}{8\pi} \int_0^\pi \left(\cos(2\omega)d\omega - \frac{32}{25}\int_0^\pi \cos(2\omega)\cos(\omega)d\omega + \frac{3}{5}\int_0^\pi \cos^2(2\omega)d\omega\right) \\[15pt]
+&= \frac{1}{8\pi} \int_0^\pi \cos(2\omega)d\omega - \frac{32}{200\pi}\int_0^\pi \cos(2\omega)\cos(\omega)d\omega + \frac{3}{40\pi} \int_0^\pi \cos^2(2\omega)d\omega
+\end{aligned}
+$$
+
+Like before, it's probably a better idea to evaluate each integral separately here
+
+$$
+\begin{aligned}
+\frac{1}{8\pi} \int_0^\pi \cos(2\omega)d\omega &= \frac{1}{8\pi} \cdot \left(\frac{1}{2} \sin(2\omega) \right) \bigg\rvert_0^\pi \\[15pt]
+&= \frac{1}{8\pi} \cdot \left(\frac{1}{2}\sin(2\pi) - \frac{1}{2}\sin(0) \right) \\[15pt]
+&= \frac{1}{8\pi} \cdot (0 - 0 ) \\[15pt]
+&= 0
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{32}{200\pi} \int_0^\pi \cos(2\omega)\cos(\omega)d\omega &= \int_0^\pi \frac{1}{2}(\cos(3\omega) + \cos(\omega))d\omega \\[15pt]
+&= \frac{32}{200\pi} \cdot \left(\frac{1}{6}\sin(3\omega) + \frac{1}{2}\sin(\omega)\right) \bigg\rvert_0^\pi \\[15pt]
+&= \frac{32}{200\pi} \cdot \left[\left(\frac{1}{6}\sin(3\pi) + \frac{1}{2}\sin(\pi)\right) - \left(\frac{1}{6}\sin(0) + \frac{1}{2}\sin(0)\right)\right] \\[15pt]
+&= \frac{32}{200\pi} \cdot (0 - 0) \\[15pt]
+&= 0
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{3}{40\pi} \int_0^\pi \cos^2(2\omega)d\omega &= \frac{3}{40\pi} \int_0^\pi \frac{1}{2}(\cos(4\omega) + 1)d\omega \\[15pt]
+&= \frac{3}{40\pi} \cdot \left(\frac{1}{8}\sin(4\omega) + \frac{1}{2}\omega \right) \bigg\rvert_0^\pi \\[15pt]
+&= \frac{3}{40\pi} \cdot \left[\left(\frac{1}{8}\sin(4\pi) + \frac{\pi}{2} \right) - \left(\frac{1}{8}\sin(0) + 0 \right)\right] \\[15pt]
+&= \frac{3}{40\pi} \cdot \frac{\pi}{2} \\[15pt]
+&= \frac{3}{80}
+\end{aligned}
+$$
+
+So we get
+
+$$\gamma(2) = \underbrace{\frac{1}{8\pi} \int_0^\pi \cos(2\omega)d\omega}_\textrm{0} - \underbrace{\frac{32}{200\pi} \int_0^\pi \cos(2\omega)\cos(\omega)d\omega}_\textrm{0} + \underbrace{\frac{3}{40\pi} \int_0^\pi \cos^2(2\omega)d\omega}_\textrm{3/80} = \frac{3}{80}$$
+
+__Part d)__
+
+The function below computes the definite integral of the cosine transform of $f(\omega)$ for 
+a given lag $k$ and returns the result.
+
+```{r, echo = TRUE, message = FALSE}
+acvf <- function(k) {
+    gamma_k <- function(w) {
+        (1/(8*pi)) * (cos(k*w) - 1.28*cos(k*w)*cos(w) + 0.6*cos(k*w)*cos(2*w))
+    }
+    out <- integrate(gamma_k, lower = 0, upper = pi)$value
+    return(out)
+}
+
+sapply(c(3:10), FUN = acvf)
+```
+
+Since the integrals here all equal zero for a sequence of $k > 2$, then $\gamma(k)$ = 0
+for $k > 2$. $\medskip$ 
+
+__Part e)__ $\medskip$
+
+As such, we have the following autocovariance function
+
+$$
+\gamma(k) = \left\{
+    \begin{array}{lr}
+        1/8, & \text{for } k = 0\\
+        2/25, & \text{for } k = 1 \\
+        3/80, & \text{for } k = 2 \\
+        0, & \text{for } k > 2 
+    \end{array}
+\right.
+$$
+
+where $k \in \mathbb{Z}$.
 
 ## Question 3
 
@@ -153,23 +289,94 @@ spec_chart <- ggplot(
 print(spec_chart)
 ```
 
-
 __Part c)__
 
 ```{r, echo = TRUE, message = FALSE}
 #' @param series A univariate time-series
-#' @param p Placeholder constant
+#' @param p Fourier frequency constant
 
 fourier_freq <- function(series, p) {
     # Input checks
-    if (p > length(series) / 2) {
+    if (max(p) > length(series) / 2) {
         stop("p cannot be greater than N/2")
     }
     if (is.ts(series) == FALSE) {
-        warning("'series' is not of type 'ts', coercing to ts")
         series <- as.ts(series)
     }
-    fft <- fft(series)
-    return(head(fft))
+    # Generate frequencies
+    N <- length(series)
+    w_p <- (2 * pi * p) / N
+    return(w_p)
 }
+
+fourier_freq(series = pelts$sales, p = 8)
+```
+
+__Part d)__
+
+```{r, echo = TRUE, message = FALSE}
+significant_freqs <- function(w_p) {
+    lm_fit <- lm(
+        formula = log(sales) ~ cos(w_p * t) + sin(w_p * t),
+        data = pelts
+    )
+    f_stat <- summary(lm_fit)$fstatistic
+    p_val <- pf(
+        q = f_stat[1], df1 = f_stat[2], df2 = f_stat[3],
+        lower.tail = FALSE)
+    return(p_val)
+}
+
+freqs <- fourier_freq(
+    series = pelts$sales,
+    p = seq(1, 27, length.out = 27)
+)
+
+sig_freqs <- tibble(
+    p = seq(1, 27, length.out = 27),
+    w_p = freqs,
+    p_value = sapply(freqs, significant_freqs)) %>%
+    filter(
+        p_value < 0.05)
+
+print(sig_freqs)
+```
+
+```{r, echo = TRUE, message = FALSE}
+lm_fit <- lm(
+    log(sales) ~ cos(0.2327*t) + sin(0.2327*t) + cos(1.629*t) + sin(1.629*t) +
+    + cos(1.978*t) + sin(1.978*t) + cos(2.0944*t) + sin(2.0944*t)
+    + cos (2.3271*t) + sin(2.3271*t) + cos(2.4435*t) + sin(2.4435*t)
+    + cos(2.5598*t) + sin(2.5598*t) + cos(2.9089*t) + sin(2.9089*t)
+    + cos(3.0252*t) + sin(3.0252*t),
+    data = pelts
+)
+
+lm_data <- tibble(
+    t = pelts$t,
+    log_sales = log(pelts$sales),
+    fitted_vals = fitted.values(lm_fit)
+)
+
+lm_chart <- ggplot(
+    data = lm_data,
+    aes(x = t)
+) +
+    geom_line(
+        aes(y = log_sales),
+        linewidth = 1.2,
+        color = "#FF0652"
+) +
+    geom_line(
+        aes(y = fitted_vals),
+        linewidth = 1.2,
+        color = "#000000"
+) +
+    labs(
+        x = "t",
+        y = "log(sales)",
+        title = "Log-Sales and Fitted Fourier Series"
+)
+
+print(lm_chart)
 ```
