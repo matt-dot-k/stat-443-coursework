@@ -6,6 +6,7 @@ output:
     bookdown::pdf_document2:
         number_sections: false
         toc: false
+        highlight: kate
 ---
 
 ```{r, echo = TRUE, message = FALSE}
@@ -38,7 +39,13 @@ plot_theme <- theme(
     panel.background = element_rect(
         fill = "#FFFFFF"),
     panel.border = element_rect(
-        fill = NA, color = "#000000", linewidth = 2.0)
+        fill = NA, color = "#000000", linewidth = 2.0),
+    legend.title = element_text(
+        size = 12, face = "bold"),
+    legend.text = element_text(
+        size = 12),
+    legend.position = "top",
+    legend.justification = "left"
 )
 
 theme_set(plot_theme)
@@ -48,11 +55,26 @@ theme_set(plot_theme)
 
 __Part a)__
 
-For the above AR(2) process, we have $\phi(B) = (1 - 1.1B + 0.3B^2)$, and taking into account that
+For the above AR(2) process, we have $\phi(B) = (1 - 1.1B + 0.3B^2)$, so we get
 
-$$f(\omega) = \frac{\sigma_Z^2}{\pi} = |\phi(e^{i\omega})|^2$$
+$$
+\begin{aligned}
+f(\omega) &= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{\lvert\phi(e^{i\omega})\rvert^2} \\[15pt]
+&= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{\lvert 1 - 1.1e^{i\omega} + 0.3e^{2i\omega}\rvert^2} \\[15pt]
+&= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{\lvert 1 - 1.1(\cos\omega + i\sin\omega) + 0.3(\cos 2\omega + i\sin 2\omega)\rvert^2} \\[15pt]
+&= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{\lvert 1 - 1.1\cos\omega - 1.1i\sin\omega + 0.3\cos 2\omega + 0.3i\sin 2\omega \rvert^2} \\[15pt]
+&= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{(1 - 1.1\cos\omega + 0.3\cos 2\omega)^2 + (-1.1\sin\omega + 0.3\sin 2\omega)^2} \\[15pt]
+&= \frac{\sigma_Z^2}{\pi[2.3 - 2.86\cos\omega - 2.2\cos 2\omega]} \\[15pt]
+\end{aligned}
+$$
 
-we get
+
+
+__Part b)__ $\medskip$
+
+As already derived in a), the power spectral density function of $\{X_t\}_{t \in \mathbb{Z}}$ is
+
+$$f(\omega) = \frac{\sigma_Z^2}{\pi[2.3 - 2.86\cos\omega - 2.2\cos 2\omega]}$$
 
 ## Question 2
 
@@ -143,6 +165,8 @@ So we get
 
 $$\underbrace{\frac{1}{8\pi} \int_{0}^{\pi} \cos(\omega)d\omega}_\textrm{0} - \underbrace{\frac{32}{200\pi} \int_{0}^{\pi} \cos^2(\omega)d\omega}_\textrm{2/25} + \underbrace{\frac{3}{40\pi} \int_{0}^{\pi} \cos(\omega)\cos(2\omega)d\omega}_\textrm{0} = -\frac{2}{25}$$
 
+\clearpage
+
 __Part c)__
 
 $$
@@ -188,7 +212,7 @@ So we get
 
 $$\gamma(2) = \underbrace{\frac{1}{8\pi} \int_0^\pi \cos(2\omega)d\omega}_\textrm{0} - \underbrace{\frac{32}{200\pi} \int_0^\pi \cos(2\omega)\cos(\omega)d\omega}_\textrm{0} + \underbrace{\frac{3}{40\pi} \int_0^\pi \cos^2(2\omega)d\omega}_\textrm{3/80} = \frac{3}{80}$$
 
-__Part d)__
+__Part d)__ $\medskip$
 
 The function below computes the definite integral of the cosine transform of $f(\omega)$ for 
 a given lag $k$ and returns the result.
@@ -234,8 +258,10 @@ pelts <- read_table("./data/pelt.txt", col_names = FALSE) %>%
     rename(
         sales = `X1`) %>%
     mutate(
-        year = seq(year("1857-01-01"), year("1910-01-01"))) %>%
-    relocate(year, .before = sales)
+        sales = sales / 1000,
+        year = seq(year("1857-01-01"), year("1910-01-01")),
+        t = year - 1856) %>%
+    relocate(c(year, t), .before = sales)
 
 pelts_chart <- ggplot(
     data = pelts,
@@ -257,7 +283,7 @@ print(pelts_chart)
 This looks like a pretty standard time series with an obvious seasonal effect.
 However, the seasonal variation occurs over periods of years, rather than months
 like we've usually seen so far. Non-seasonal levels largely remain constant 
-throughout the entire time period.
+throughout the entire time period. $\medskip$
 
 __Part b)__
 
@@ -265,7 +291,8 @@ __Part b)__
 pelts_spec <- spec.pgram(
     ts(pelts$sales, start = c(1857), frequency = 1),
     log = "no",
-    plot = FALSE)
+    plot = FALSE
+)
 
 spec_data <- tibble(
     freq = seq(0, 0.5, length.out = length(pelts_spec$spec)),
@@ -306,6 +333,8 @@ fourier_freq <- function(series, p) {
     # Generate frequencies
     N <- length(series)
     w_p <- (2 * pi * p) / N
+
+    # Return output
     return(w_p)
 }
 
@@ -342,40 +371,51 @@ sig_freqs <- tibble(
 print(sig_freqs)
 ```
 
+__Part e)__
+
 ```{r, echo = TRUE, message = FALSE}
 lm_fit <- lm(
-    log(sales) ~ cos(0.2327*t) + sin(0.2327*t) + cos(1.629*t) + sin(1.629*t) +
-    + cos(1.978*t) + sin(1.978*t) + cos(2.0944*t) + sin(2.0944*t)
-    + cos (2.3271*t) + sin(2.3271*t) + cos(2.4435*t) + sin(2.4435*t)
-    + cos(2.5598*t) + sin(2.5598*t) + cos(2.9089*t) + sin(2.9089*t)
-    + cos(3.0252*t) + sin(3.0252*t),
+    log(sales) ~ cos(0.698 * t) + sin(0.698 * t),
     data = pelts
 )
 
+lmtest::coeftest(lm_fit)
+```
+
+__Part f)__
+
+```{r, echo = TRUE, message = FALSE}
 lm_data <- tibble(
     t = pelts$t,
     log_sales = log(pelts$sales),
     fitted_vals = fitted.values(lm_fit)
 )
 
+palette <- c("Sales" = "#FF0652", "Fourier Series" = "#000000")
+
 lm_chart <- ggplot(
     data = lm_data,
     aes(x = t)
 ) +
     geom_line(
-        aes(y = log_sales),
-        linewidth = 1.2,
-        color = "#FF0652"
+        aes(y = log_sales, color = "Sales"),
+        linewidth = 1.2
 ) +
     geom_line(
-        aes(y = fitted_vals),
-        linewidth = 1.2,
-        color = "#000000"
+        aes(y = fitted_vals, color = "Fourier Series"),
+        linewidth = 1.2
 ) +
     labs(
         x = "t",
         y = "log(sales)",
-        title = "Log-Sales and Fitted Fourier Series"
+        title = "Log-Sales and Fitted Fourier Series",
+        color = "Series"
+) +
+    scale_x_continuous(
+        n.breaks = 10
+) +
+    scale_color_manual(
+        values = palette
 )
 
 print(lm_chart)
