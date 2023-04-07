@@ -53,7 +53,7 @@ theme_set(plot_theme)
 
 ## Question 1
 
-__Part a)__
+__Part a)__ $\medskip$
 
 For the above AR(2) process, we have $\phi(B) = (1 - 1.1B + 0.3B^2)$, so we get
 
@@ -64,17 +64,69 @@ f(\omega) &= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{\lvert\phi(e^{i\omega})\rvert
 &= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{\lvert 1 - 1.1(\cos\omega + i\sin\omega) + 0.3(\cos 2\omega + i\sin 2\omega)\rvert^2} \\[15pt]
 &= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{\lvert 1 - 1.1\cos\omega - 1.1i\sin\omega + 0.3\cos 2\omega + 0.3i\sin 2\omega \rvert^2} \\[15pt]
 &= \frac{\sigma_Z^2}{\pi} \cdot \frac{1}{(1 - 1.1\cos\omega + 0.3\cos 2\omega)^2 + (-1.1\sin\omega + 0.3\sin 2\omega)^2} \\[15pt]
-&= \frac{\sigma_Z^2}{\pi[2.3 - 2.86\cos\omega - 2.2\cos 2\omega]} \\[15pt]
+&= \frac{\sigma_Z^2}{\pi[2.3 - 2.86\cos\omega + 0.6\cos 2\omega]} \\[15pt]
 \end{aligned}
 $$
 
+Then we can calculate the variance of $X_t$ using a shortcut
 
+$$\sigma_X^2 = \frac{\sigma_Z^2}{1 - \rho(1)\phi_1 - \rho(2)\phi_2} \\[15pt]$$
+
+With the given acf, we have $\rho(1) = 0.846$ and $\rho(2) = 0.631$, so we get
+
+$$
+\begin{aligned}
+\sigma_X^2 &= \frac{\sigma_Z^2}{1 - 0.846(1.1) - 0.631(-0.3)} \\[15pt]
+&= \frac{\sigma_Z^2}{0.259} \\
+\end{aligned}
+$$
+
+Plugging this into $f^{\ast}(\omega) = f(\omega)/\sigma_X^2$ gives
+
+$$
+\begin{aligned}
+f^{\ast}(\omega) &= \frac{\sigma_Z^2}{\pi[2.3 - 2.86\cos\omega +0.6\cos 2\omega]} \cdot \frac{0.259}{\sigma_Z^2} \\[15pt]
+&= \frac{0.259}{\pi[2.3 - 2.86\cos\omega + 0.6\cos 2\omega]} \\[15pt]
+\end{aligned}
+$$
+
+Note: the derivation above used a method outlined on page 161 of the textbook. $\medskip$
 
 __Part b)__ $\medskip$
 
 As already derived in a), the power spectral density function of $\{X_t\}_{t \in \mathbb{Z}}$ is
 
-$$f(\omega) = \frac{\sigma_Z^2}{\pi[2.3 - 2.86\cos\omega - 2.2\cos 2\omega]}$$
+$$f(\omega) = \frac{\sigma_Z^2}{\pi[2.3 - 2.86\cos\omega + 0.6\cos 2\omega]}$$
+
+__Part c)__ 
+
+```{r, echo = TRUE, message = FALSE}
+norm_spec <- function(w) {
+    spec <- 0.259 / (pi * (2.3 - 2.86 * cos(w) + 0.6 * cos(2 * w)))
+    return(spec)
+}
+
+spec_data <- tibble(
+    w = seq(1, pi, length.out = 100)) %>%
+    mutate(
+        spectrum = norm_spec(w))
+
+norm_spec_chart  <- ggplot(
+    data = spec_data,
+    aes(x = w / (2 * pi), y = spectrum)
+) +
+    geom_line(
+        linewidth = 1.2,
+        color = "#FF0652"
+) +
+    labs(
+        x = "Frequency",
+        y = "Normalized Spectrum",
+        title = "Normalized Spectral Density of an AR(2) Process"
+)
+
+print(norm_spec_chart)
+```
 
 ## Question 2
 
@@ -85,11 +137,11 @@ $$
 \gamma(0) &= \int_{0}^{\pi} \cos(0 \cdot \omega)f(\omega)d\omega \\[15pt]
 &= \int_{0}^{\pi} f(\omega)d\omega \\[15pt]
 &= \int_{0}^{\pi} \frac{1}{8\pi} \left(1 - \frac{32}{35}\cos(\omega) + \frac{3}{5}\cos(2\omega)\right)d\omega \\[15pt]
-&= \frac{1}{8\pi} \int_{0}^{\pi} d\omega - \frac{32}{200\pi} \int_{0}^{\pi} \cos(\omega)d\omega + \frac{3}{40\pi} \int_{0}^{\pi} \cos(2\omega)d\omega \\
+&= \frac{1}{8\pi} \int_{0}^{\pi} d\omega - \frac{32}{200\pi} \int_{0}^{\pi} \cos(\omega)d\omega + \frac{3}{40\pi} \int_{0}^{\pi} \cos(2\omega)d\omega \\[15pt]
 \end{aligned}
 $$
 
-The integrals can then be evaluated separately
+The integrals here can then be calculated separately
 
 $$
 \begin{aligned}
@@ -131,7 +183,7 @@ $$
 \end{aligned}
 $$
 
-Evaluating the three integrals separately gives
+Like before, it's probably a better idea to calculate the integrals individually
 
 $$
 \begin{aligned}
@@ -173,11 +225,11 @@ $$
 \begin{aligned}
 \gamma(2) &= \int_0^\pi \cos(2\omega)f(\omega)d\omega \\[15pt]
 &= \frac{1}{8\pi} \int_0^\pi \left(\cos(2\omega)d\omega - \frac{32}{25}\int_0^\pi \cos(2\omega)\cos(\omega)d\omega + \frac{3}{5}\int_0^\pi \cos^2(2\omega)d\omega\right) \\[15pt]
-&= \frac{1}{8\pi} \int_0^\pi \cos(2\omega)d\omega - \frac{32}{200\pi}\int_0^\pi \cos(2\omega)\cos(\omega)d\omega + \frac{3}{40\pi} \int_0^\pi \cos^2(2\omega)d\omega
+&= \frac{1}{8\pi} \int_0^\pi \cos(2\omega)d\omega - \frac{32}{200\pi}\int_0^\pi \cos(2\omega)\cos(\omega)d\omega + \frac{3}{40\pi} \int_0^\pi \cos^2(2\omega)d\omega \\[15pt]
 \end{aligned}
 $$
 
-Like before, it's probably a better idea to evaluate each integral separately here
+Calculating the integrals separately means we get
 
 $$
 \begin{aligned}
@@ -255,12 +307,10 @@ __Part a)__
 
 ```{r, echo = TRUE, message = FALSE}
 pelts <- read_table("./data/pelt.txt", col_names = FALSE) %>%
-    rename(
-        sales = `X1`) %>%
-    mutate(
-        sales = sales / 1000,
-        year = seq(year("1857-01-01"), year("1910-01-01")),
-        t = year - 1856) %>%
+    rename(sales = `X1`) %>%
+    mutate(sales = sales / 1000,
+           year = seq(year("1857-01-01"), year("1910-01-01")),
+           t = year - 1856) %>%
     relocate(c(year, t), .before = sales)
 
 pelts_chart <- ggplot(
@@ -282,25 +332,19 @@ print(pelts_chart)
 
 This looks like a pretty standard time series with an obvious seasonal effect.
 However, the seasonal variation occurs over periods of years, rather than months
-like we've usually seen so far. Non-seasonal levels largely remain constant 
-throughout the entire time period. $\medskip$
+like we've usually seen so far. $\medskip$
 
 __Part b)__
 
 ```{r, echo = TRUE, message = FALSE}
-pelts_spec <- spec.pgram(
-    ts(pelts$sales, start = c(1857), frequency = 1),
-    log = "no",
-    plot = FALSE
-)
+pelts_spec <- spec.pgram(pelts$sales, log = "no", plot = FALSE)
 
-spec_data <- tibble(
+spectrum <- tibble(
     freq = seq(0, 0.5, length.out = length(pelts_spec$spec)),
-    spec = pelts_spec$spec
-)
+    spec = pelts_spec$spec)
 
-spec_chart <- ggplot(
-    data = spec_data,
+spectrum_chart <- ggplot(
+    data = spectrum,
     aes(x = freq, y = spec)
 ) +
     geom_line(
@@ -313,28 +357,36 @@ spec_chart <- ggplot(
         title = "Spectral Density of Pelt Sales"
 )
 
-print(spec_chart)
+print(spectrum_chart)
 ```
+
+```{r, echo = TRUE, message = FALSE}
+which.max(spectrum$spec)
+```
+
+In this case, $p = 6$ maximizes the spectrum, so the dominating frequency is
+
+$$\omega_p = \frac{2\pi p}{N} = \frac{12\pi}{54}$$
 
 __Part c)__
 
 ```{r, echo = TRUE, message = FALSE}
 #' @param series A univariate time-series
-#' @param p Fourier frequency constant
+#' @param p Fourier frequency constant, must be between 0 and N/2
 
 fourier_freq <- function(series, p) {
-    # Input checks
+    # Check inputs
     if (max(p) > length(series) / 2) {
         stop("p cannot be greater than N/2")
     }
     if (is.ts(series) == FALSE) {
         series <- as.ts(series)
     }
-    # Generate frequencies
+    # Generate frequency with given constant
     N <- length(series)
     w_p <- (2 * pi * p) / N
 
-    # Return output
+    # Return output when function is called
     return(w_p)
 }
 
@@ -376,10 +428,9 @@ __Part e)__
 ```{r, echo = TRUE, message = FALSE}
 lm_fit <- lm(
     log(sales) ~ cos(0.698 * t) + sin(0.698 * t),
-    data = pelts
-)
+    data = pelts)
 
-lmtest::coeftest(lm_fit)
+coef(lm_fit)
 ```
 
 __Part f)__
@@ -388,8 +439,7 @@ __Part f)__
 lm_data <- tibble(
     t = pelts$t,
     log_sales = log(pelts$sales),
-    fitted_vals = fitted.values(lm_fit)
-)
+    fitted_vals = fitted.values(lm_fit))
 
 palette <- c("Sales" = "#FF0652", "Fourier Series" = "#000000")
 
